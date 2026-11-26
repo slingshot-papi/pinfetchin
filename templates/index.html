@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    
+    <!-- SEO & Metadata -->
+    <title>PinFetch - Pinterest Video & Image Downloader | 1080p MP4 & HD Photos (Mobile, Tablet & PC)</title>
+    <meta name="description" content="Free, fast Pinterest video and image downloader. Download Pinterest videos, reels, photos, and carousels in 1080p Full HD MP4 and uncompressed image quality. Compatible with iPhone, iPad, Android, Mac and PC.">
+    <meta name="keywords" content="pinterest video downloader, download pinterest video, pinterest image downloader, download pinterest images, pin photo saver, pinterest mp4 download, pinterest reels downloader">
+    <meta name="theme-color" content="#e60023">
+    
+    <!-- Apple / iOS Specific Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="PinFetch">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.svg">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+
+    <!-- Google Fonts & Stylesheet -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="/" class="brand-logo" aria-label="PinFetch Homepage">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2C6.48 2 2 6.48 2 12c0 4.23 2.64 7.84 6.39 9.27-.09-.78-.17-1.98.04-2.83.19-.77 1.25-5.32 1.25-5.32s-.32-.64-.32-1.58c0-1.48.86-2.58 1.93-2.58.91 0 1.35.68 1.35 1.5 0 .91-.58 2.28-.88 3.55-.25 1.06.53 1.93 1.58 1.93 1.89 0 3.35-1.99 3.35-4.87 0-2.55-1.83-4.33-4.45-4.33-3.04 0-4.82 2.28-4.82 4.63 0 .92.35 1.9.8 2.44.09.11.1.2.07.31-.08.31-.25 1.02-.28 1.16-.04.18-.15.22-.34.13-1.28-.59-2.08-2.45-2.08-3.95 0-3.21 2.33-6.17 6.74-6.17 3.54 0 6.29 2.52 6.29 5.89 0 3.51-2.21 6.34-5.28 6.34-1.03 0-2-.54-2.33-1.17l-.64 2.43c-.23.89-.86 2.01-1.28 2.69C10.08 21.84 11.02 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2z" fill="#E60023" stroke="none"/>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-name">Pin<span class="logo-accent">Fetch</span></span>
+                    <span class="badge-tech">HD Downloader</span>
+                </div>
+            </a>
+
+            <!-- Device Compatibility Indicator -->
+            <div class="device-pill" title="100% compatible across Phones, Tablets, and Desktops">
+                <span class="device-icon">📱</span>
+                <span class="device-icon">📲</span>
+                <span class="device-icon">💻</span>
+                <span class="device-label">All Devices</span>
+            </div>
+
+            <div class="nav-actions">
+                <!-- Install PWA Button (Hidden by default, shown when eligible) -->
+                <button id="pwaInstallBtn" class="btn-pwa" style="display: none;" title="Install App to your device">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Install App</span>
+                </button>
+
+                <!-- Theme Toggle Button -->
+                <button id="themeToggleBtn" class="btn-icon" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
+                    <svg id="themeIconSun" class="theme-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg id="themeIconMoon" class="theme-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Wrapper -->
+    <main class="main-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-badge">
+                <span class="sparkle">✨</span> Fast, Free & No Watermarks
+            </div>
+            <h1 class="hero-title">Download Pinterest Videos <span class="gradient-text">& Images</span> in HD</h1>
+            <p class="hero-subtitle">
+                Paste any Pinterest video, reel, photo, or carousel link to download crisp MP4 videos and full-resolution images on your phone, tablet, or PC.
+            </p>
+
+            <!-- Downloader Input Box -->
+            <div class="downloader-card">
+                <form id="downloadForm" class="downloader-form" onsubmit="return false;">
+                    <div class="input-wrapper">
+                        <div class="input-icon">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                            </svg>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="pinUrlInput" 
+                            class="pin-input" 
+                            placeholder="Paste Pinterest link (video, reel, photo, or pin.it/...)" 
+                            autocomplete="off" 
+                            autocorrect="off" 
+                            autocapitalize="off" 
+                            spellcheck="false"
+                        >
+                        <button type="button" id="clearBtn" class="input-action-btn" title="Clear input" style="display: none;">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                        <button type="button" id="pasteBtn" class="input-action-btn paste-btn" title="Paste from clipboard">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                            </svg>
+                            <span>Paste</span>
+                        </button>
+                    </div>
+
+                    <button type="submit" id="fetchBtn" class="btn-primary">
+                        <span class="btn-text">Download</span>
+                        <svg class="btn-arrow" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </form>
+
+                <!-- Quick Try-it Samples -->
+                <div class="sample-pills-row">
+                    <span class="sample-label">Try sample:</span>
+                    <button type="button" class="sample-pill" data-url="https://www.pinterest.com/pin/664281013778109217/">
+                        🎬 Origami (1080p MP4)
+                    </button>
+                    <button type="button" class="sample-pill" data-url="https://www.pinterest.com/pin/1084663891475263837/">
+                        🍳 Gadgets (HD MP4)
+                    </button>
+                    <button type="button" class="sample-pill" data-url="https://www.pinterest.com/pin/7036943152646399/">
+                        🖼 Digital Art (HD Image)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Spinner & State Indicator -->
+            <div id="loadingBox" class="loading-container" style="display: none;">
+                <div class="spinner-ring">
+                    <div class="ring-child"></div>
+                    <div class="ring-child"></div>
+                </div>
+                <div class="loading-info">
+                    <h4 id="loadingStepTitle">Fetching Pinterest Media...</h4>
+                    <p id="loadingStepDesc">Contacting Pinterest CDN and extracting video streams</p>
+                </div>
+            </div>
+
+            <!-- Error Box -->
+            <div id="errorBox" class="alert-box error" style="display: none;">
+                <div class="alert-icon">⚠️</div>
+                <div class="alert-content">
+                    <h4 id="errorTitle">Download Failed</h4>
+                    <p id="errorMessage">Please check your link and try again.</p>
+                </div>
+                <button type="button" class="alert-close" onclick="document.getElementById('errorBox').style.display='none'">✕</button>
+            </div>
+        </section>
+
+        <!-- Media Result Card (Dynamic) -->
+        <section id="resultSection" class="result-section" style="display: none;">
+            <div class="result-card">
+                <!-- Video Preview Column -->
+                <div class="result-media-col">
+                    <div class="player-wrapper">
+                        <video id="videoPreview" class="video-player" controls playsinline preload="metadata">
+                            Your browser does not support HTML5 video preview.
+                        </video>
+                        <div id="imagePreviewContainer" class="image-preview" style="display: none;">
+                            <img id="imagePreview" src="" alt="Pinterest Pin Media">
+                        </div>
+                    </div>
+                    
+                    <div class="media-meta">
+                        <div class="meta-tags">
+                            <span id="badgeDuration" class="meta-tag duration-tag">⏱ 0:00</span>
+                            <span id="badgeQuality" class="meta-tag quality-tag">HD 720p</span>
+                            <span id="badgeType" class="meta-tag type-tag">MP4 Video</span>
+                        </div>
+                        <h2 id="resultTitle" class="result-title">Pinterest Video</h2>
+                        <div class="creator-row">
+                            <div class="creator-avatar">📌</div>
+                            <div class="creator-info">
+                                <span class="creator-by">Shared by</span>
+                                <a id="creatorLink" href="#" target="_blank" rel="noopener" class="creator-name">Pinterest Creator</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Download Options Column -->
+                <div class="result-actions-col">
+                    <div class="actions-header">
+                        <h3>Available Downloads</h3>
+                        <span class="tag-status">Ready</span>
+                    </div>
+
+                    <!-- Primary Big Instant Download Button -->
+                    <a id="btnPrimaryDownload" href="#" class="btn-download-primary" download>
+                        <div class="dl-icon-circle">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                        </div>
+                        <div class="dl-info">
+                            <span class="dl-main-text">Download Best Quality MP4</span>
+                            <span id="primaryDlSubtext" class="dl-sub-text">Direct high-speed stream</span>
+                        </div>
+                    </a>
+
+                    <!-- Quality Formats List -->
+                    <div class="formats-list-box">
+                        <div class="formats-list-header">
+                            <span>Format & Resolution</span>
+                            <span>Action</span>
+                        </div>
+                        <div id="formatsListContainer" class="formats-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Extra Tools: Audio & Cover & Copy -->
+                    <div class="extra-actions-grid">
+                        <a id="btnDownloadAudio" href="#" class="btn-secondary" title="Extract Audio as MP3">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18V5l12-2v13"></path>
+                                <circle cx="6" cy="18" r="3"></circle>
+                                <circle cx="18" cy="16" r="3"></circle>
+                            </svg>
+                            <span>Download Audio (MP3)</span>
+                        </a>
+
+                        <a id="btnDownloadThumbnail" href="#" class="btn-secondary" title="Download High-Res Cover Image" target="_blank" download>
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                <polyline points="21 15 16 10 5 21"></polyline>
+                            </svg>
+                            <span>Download HD Cover</span>
+                        </a>
+
+                        <button id="btnCopyLink" class="btn-secondary" title="Copy Direct Video Link">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            <span id="copyLinkText">Copy Stream Link</span>
+                        </button>
+                    </div>
+
+                    <!-- Device Saving Instructions Accordion for Mobile Users -->
+                    <div class="mobile-tip-banner">
+                        <div class="tip-badge">💡 Tip for Mobile Users</div>
+                        <p id="tipText">
+                            <strong>iPhone / iPad:</strong> Tap Download &rarr; look for the download arrow in Safari &rarr; tap the file &rarr; tap <strong>Share</strong> &rarr; <strong>"Save Video" / "Save Image"</strong> to save directly into your Photos library!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Image Carousel Section (for Carousel / Multi-Photo Pins) -->
+            <div id="carouselSection" class="carousel-section" style="display: none;">
+                <div class="carousel-header">
+                    <div>
+                        <span class="carousel-badge">📸 Pin Gallery</span>
+                        <h3 class="carousel-title">All Photos in this Pin (<span id="carouselCount">0</span>)</h3>
+                    </div>
+                    <span class="carousel-subtext">Tap any photo to download in original high resolution</span>
+                </div>
+                <div id="carouselGrid" class="carousel-grid">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Recent Downloads History Section -->
+        <section id="historySection" class="history-section" style="display: none;">
+            <div class="section-header">
+                <h3>🕒 Recent Downloads on this Device</h3>
+                <button id="clearHistoryBtn" class="btn-text-danger">Clear History</button>
+            </div>
+            <div id="historyGrid" class="history-grid">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- Device Compatibility & Step-by-Step Guides Section -->
+        <section class="device-guides-section">
+            <div class="section-title-wrap text-center">
+                <span class="sub-badge">Hardware Guides</span>
+                <h2>How to Download on Any Device</h2>
+                <p>Designed and optimized for seamless experience across phones, tablets, and desktops.</p>
+            </div>
+
+            <!-- Device Tabs -->
+            <div class="guide-tabs">
+                <button class="guide-tab-btn active" data-tab="ios-tab">
+                    <span class="tab-icon">🍏</span> iPhone & iPad
+                </button>
+                <button class="guide-tab-btn" data-tab="android-tab">
+                    <span class="tab-icon">🤖</span> Android Devices
+                </button>
+                <button class="guide-tab-btn" data-tab="pc-tab">
+                    <span class="tab-icon">💻</span> PC, Mac & Laptop
+                </button>
+            </div>
+
+            <!-- Tab Content 1: iOS -->
+            <div id="ios-tab" class="tab-content active">
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h4>Copy Pin Link</h4>
+                        <p>Open the Pinterest app on your iPhone or iPad, tap the <strong>Share</strong> icon on any video, and select <strong>Copy Link</strong>.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h4>Paste in PinFetch</h4>
+                        <p>Open Safari, visit this website, tap the <strong>Paste</strong> button, and hit <strong>Download</strong>.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h4>Save to Photos</h4>
+                        <p>Tap <strong>Download Best Quality MP4</strong>. In Safari's download manager, tap the file &rarr; Share icon &rarr; <strong>Save Video</strong>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 2: Android -->
+            <div id="android-tab" class="tab-content">
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h4>Copy Video Link</h4>
+                        <p>In Pinterest for Android, tap the three dots or Share arrow on the video pin and select <strong>Copy Link</strong>.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h4>Fetch the Video</h4>
+                        <p>In Chrome or your favorite browser, paste the link and click <strong>Download</strong> to load video resolutions.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h4>Instant Save</h4>
+                        <p>Tap <strong>Download MP4</strong>. The video saves instantly into your phone's <strong>Downloads</strong> folder and Gallery.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content 3: PC / Mac -->
+            <div id="pc-tab" class="tab-content">
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h4>Copy URL from Browser</h4>
+                        <p>Copy the pin URL from your browser address bar (e.g. <code>pinterest.com/pin/12345...</code>).</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h4>Paste & Extract</h4>
+                        <p>Paste the link into the search box above or press <kbd>Ctrl+V</kbd> / <kbd>Cmd+V</kbd> and click Download.</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h4>Download in 1080p</h4>
+                        <p>Select your desired resolution (1080p Full HD, 720p HD) and save directly to your computer storage.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Showcase Grid -->
+        <section class="features-section">
+            <div class="section-title-wrap text-center">
+                <span class="sub-badge">Why Choose PinFetch</span>
+                <h2>Built for Speed, Quality & Convenience</h2>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Direct CDN streaming delivers video downloads in seconds without server lag.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Mobile & Tablet Optimized</h3>
+                    <p>Tailored touch layout, PWA support, and responsive design for every screen size.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💎</div>
+                    <h3>High-Definition 1080p</h3>
+                    <p>Extracts original source quality up to 1080p Full HD without compression.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚫</div>
+                    <h3>Zero Watermarks</h3>
+                    <p>Clean videos just as uploaded by creators, free of unwanted logos or branding.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎵</div>
+                    <h3>Audio Extractor</h3>
+                    <p>Easily convert and extract background music and audio tracks to MP3 format.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Private & 100% Free</h3>
+                    <p>No account required, no tracking, and completely unlimited downloads.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="faq-section">
+            <div class="section-title-wrap text-center">
+                <span class="sub-badge">Got Questions?</span>
+                <h2>Frequently Asked Questions</h2>
+                <p>Everything you need to know about downloading Pinterest videos, reels, and photos with PinFetch.</p>
+            </div>
+
+            <div class="faq-accordion">
+                <!-- 1. How to download -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>How do I download a Pinterest video using PinFetch?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Downloading is simple and takes three quick steps:</p>
+                        <ol style="margin: 0.5rem 0 0.5rem 1.25rem; line-height: 1.7;">
+                            <li>Open Pinterest, find the video or reel you want, tap the <strong>Share</strong> icon, and select <strong>Copy Link</strong>.</li>
+                            <li>Open PinFetch in any browser, paste the copied link into the search bar, and tap <strong>Download</strong>.</li>
+                            <li>Choose your desired resolution (1080p Full HD, 720p HD, etc.) and tap <strong>Download .MP4</strong> to save it directly to your device.</li>
+                        </ol>
+                    </div>
+                </details>
+
+                <!-- 2. Android -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>How to use the Pinterest downloader on Android?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>In the Pinterest Android app, tap the three dots or Share arrow on any pin and select <strong>Copy Link</strong>. Then open Chrome, visit PinFetch, tap the <strong>Paste</strong> button, and tap <strong>Download</strong>. The video or image will download straight into your device's <strong>Downloads</strong> folder and immediately appear in your Google Photos or Gallery app. You can also tap Chrome menu &rarr; <strong>"Install app"</strong> to install PinFetch as a home screen PWA.</p>
+                    </div>
+                </details>
+
+                <!-- 3. iPhone / iPad -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Can I download Pinterest videos on iPhone and iPad?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Yes! PinFetch is fully optimized for iOS and iPadOS Safari:</p>
+                        <ol style="margin: 0.5rem 0 0.5rem 1.25rem; line-height: 1.7;">
+                            <li>Copy the pin link from the Pinterest app.</li>
+                            <li>Paste into PinFetch in Safari and tap <strong>Download</strong>.</li>
+                            <li>Tap <strong>Download Best Quality MP4</strong>. When Safari asks, tap <strong>Download</strong>.</li>
+                            <li>Tap the blue download circle in Safari's address bar, select the downloaded file, tap the <strong>Share</strong> button, and choose <strong>"Save Video"</strong> to move it into your Photos Camera Roll.</li>
+                        </ol>
+                    </div>
+                </details>
+
+                <!-- 4. Convert to MP4 -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>How to convert Pinterest video to MP4?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>PinFetch converts videos to MP4 automatically! Many Pinterest reels and story videos are stored as fragmented HLS (.m3u8) streams. Our backend server dynamically remuxes these streams into universal, standalone <strong>.MP4</strong> files on-the-fly using <code>ffmpeg</code>. You don't need any third-party conversion software — every video downloaded from PinFetch is guaranteed to be a native MP4 that plays on any media player.</p>
+                    </div>
+                </details>
+
+                <!-- 5. Private videos or boards -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Can I download private Pinterest videos or secret boards?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>No. PinFetch respects user privacy and copyright guidelines. We can only extract and download content from <strong>public pins</strong> that can be viewed without logging into a private account. Content inside secret boards, private group boards, or password-protected pins cannot be retrieved.</p>
+                    </div>
+                </details>
+
+                <!-- 6. Tracking / Privacy -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Does PinFetch track a user's downloaded videos or browsing activity?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>No. PinFetch operates on a strict zero-tracking policy. We do not store copies of your downloaded videos or photos on our servers, and we never log your IP address or browsing habits. Your "Recent Downloads" list is stored purely on your own device inside your browser's private local storage (<code>localStorage</code>), and you can clear it anytime with a single click.</p>
+                    </div>
+                </details>
+
+                <!-- 7. Where are files saved -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Where is the video or image saved after download?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>The save location depends on your operating system:</p>
+                        <ul style="margin: 0.5rem 0 0.5rem 1.25rem; line-height: 1.7;">
+                            <li><strong>Android:</strong> Saved directly to your device's <code>/Download</code> folder and visible in your Gallery or Photos app.</li>
+                            <li><strong>iPhone / iPad:</strong> Saved to Safari's Downloads (in the Files app). Tap the download arrow &rarr; Share &rarr; <strong>"Save Video"</strong> to add it to your Photos Camera Roll.</li>
+                            <li><strong>PC & Mac:</strong> Saved to your operating system's standard <strong>Downloads</strong> folder (e.g. <code>C:\Users\YourName\Downloads</code> or <code>/Users/YourName/Downloads</code>).</li>
+                        </ul>
+                    </div>
+                </details>
+
+                <!-- 8. Registration / Account -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Do I need to register an account to download videos?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>No account or registration is required. You never have to sign up, provide an email address, or enter personal information to use PinFetch. Just open the website, paste a link, and download your media instantly.</p>
+                    </div>
+                </details>
+
+                <!-- 9. Watermarks -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Does PinFetch add watermarks to downloaded videos or photos?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>No, PinFetch never adds watermarks, logos, or overlays to any video or photo. You get the pure, untouched original file exactly as published by the Pinterest creator.</p>
+                    </div>
+                </details>
+
+                <!-- 10. Safety -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Is PinFetch safe for my phone, tablet, and PC?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Yes, PinFetch is 100% safe, clean, and secure. PinFetch is a web-based service that streams media directly through encrypted HTTPS connections. There is no software, extension, or executable to install, meaning zero risk of viruses, spyware, malware, or suspicious redirect popups.</p>
+                    </div>
+                </details>
+
+                <!-- 11. Is it free -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Is PinFetch completely free to use?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Yes, PinFetch is 100% free with unlimited downloads. There are no daily limits, subscriptions, speed throttling, or hidden paywalls. You can download as many videos, reels, photos, and music tracks as you wish.</p>
+                    </div>
+                </details>
+
+                <!-- 12. Short links & Carousels -->
+                <details class="faq-item">
+                    <summary class="faq-question">
+                        <span>Does PinFetch support short links like pin.it and multi-photo carousel pins?</span>
+                        <span class="faq-arrow">▼</span>
+                    </summary>
+                    <div class="faq-answer">
+                        <p>Yes! PinFetch automatically follows and resolves short URLs (like <code>https://pin.it/...</code>) generated by the mobile Pinterest app. Additionally, if you paste a link to a carousel pin with multiple photos, PinFetch detects all images and provides an interactive gallery with 1-click download buttons for each individual high-resolution picture.</p>
+                    </div>
+                </details>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span class="logo-name">Pin<span class="logo-accent">Fetch</span></span>
+                <p>Fast and reliable Pinterest video downloader for all devices.</p>
+            </div>
+            <div class="footer-note">
+                <p>Disclaimer: PinFetch is an independent tool and is not affiliated, endorsed, or certified by Pinterest. All trademarks belong to their respective owners.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Element -->
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+    <!-- Scripts -->
+    <script src="/static/js/app.js?v=2"></script>
+    <script src="/static/js/pwa.js?v=2"></script>
+</body>
+</html>
