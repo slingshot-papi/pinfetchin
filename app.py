@@ -5,9 +5,16 @@ Compatible across desktop, tablet, and mobile devices (iOS, Android, etc.)
 
 import os
 import re
+import json
+import time
+import uuid
 import mimetypes
 import logging
 import subprocess
+import threading
+from collections import defaultdict, deque
+from datetime import datetime, timezone
+from functools import wraps
 from urllib.parse import unquote
 import requests
 from flask import (
@@ -29,8 +36,98 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+TAKEDOWN_LOG_PATH = os.path.join(BASE_DIR, "takedown_requests.jsonl")
+
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL", "contact@pinfetch.app")
 
 app = Flask(__name__, static_folder=STATIC_DIR, template_folder=TEMPLATES_DIR)
+
+
+# ---------------------------------------------------------------------------
+# Thread-safe Sliding Window Rate Limiter
+# ---------------------------------------------------------------------------
+class SlidingWindowRateLimiter:
+    """In-memory per-IP sliding window rate limiter to prevent server overload."""
+
+    def __init__(self):
+        self._buckets: dict[str, dict[str, deque]] = defaultdict(lambda: defaultdict(deque))
+        self._lock = threading.Lock()
+
+    def is_allowed(self, bucket: str, client_ip: str, max_requests: int, window_seconds: int) -> tuple[bool, int, int]:
+        """
+        Check if request is within rate limit.
+        Returns (allowed, remaining, retry_after_seconds).
+        """
+        now = time.monotonic()
+        cutoff = now - window_seconds
+
+        with self._lock:
+            timestamps = self._buckets[bucket][client_ip]
+            while timestamps and timestamps[0] <= cutoff:
+                timestamps.popleft()
+
+            if len(timestamps) >= max_requests:
+                retry_after = max(1, int(timestamps[0] + window_seconds - now) + 1)
+                return False, 0, retry_after
+
+            timestamps.append(now)
+            remaining = max_requests - len(timestamps)
+            return True, remaining, 0
+
+
+rate_limiter = SlidingWindowRateLimiter()
+_takedown_lock = threading.Lock()
+
+
+def get_client_ip() -> str:
+    """Resolve client IP address, accounting for reverse proxies."""
+    forwarded = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    if forwarded:
+        return forwarded
+    real_ip = request.headers.get("X-Real-IP", "").strip()
+    if real_ip:
+        return real_ip
+    return request.remote_addr or "unknown"
+
+
+def rate_limit(bucket: str, max_requests: int, window_seconds: int, json_response: bool = True):
+    """Decorator enforcing per-IP sliding window rate limiting."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            client_ip = get_client_ip()
+            allowed, remaining, retry_after = rate_limiter.is_allowed(
+                bucket, client_ip, max_requests, window_seconds
+            )
+            if not allowed:
+                logger.warning(f"Rate limit exceeded for {client_ip} on bucket '{bucket}'")
+                msg = f"Too many requests. Please wait {retry_after} seconds before trying again."
+                if json_response:
+                    resp = jsonify({"success": False, "error": msg, "retry_after": retry_after})
+                    resp.status_code = 429
+                else:
+                    resp = Response(msg, status=429, mimetype="text/plain")
+                resp.headers["Retry-After"] = str(retry_after)
+                resp.headers["X-RateLimit-Limit"] = str(max_requests)
+                resp.headers["X-RateLimit-Remaining"] = "0"
+                return resp
+
+            result = fn(*args, **kwargs)
+            if isinstance(result, Response):
+                result.headers["X-RateLimit-Limit"] = str(max_requests)
+                result.headers["X-RateLimit-Remaining"] = str(remaining)
+            return result
+        return wrapper
+    return decorator
+
+
+@app.context_processor
+def inject_site_globals():
+    """Make contact email and site metadata available to all templates."""
+    return {
+        "contact_email": CONTACT_EMAIL,
+        "current_year": datetime.now().year,
+    }
 
 # Sample working pins for 1-click testing
 SAMPLE_PINS = [
@@ -76,6 +173,7 @@ def get_sample():
 
 
 @app.route("/api/extract", methods=["POST"])
+@rate_limit("extract", max_requests=15, window_seconds=60, json_response=True)
 def api_extract():
     """Extract metadata and formats for a Pinterest URL."""
     try:
@@ -106,6 +204,7 @@ def api_extract():
 
 
 @app.route("/api/download")
+@rate_limit("download", max_requests=30, window_seconds=60, json_response=False)
 def api_download():
     """
     Stream video/image file from Pinterest to client as a downloadable file.
@@ -236,6 +335,7 @@ def api_download():
 
 
 @app.route("/api/audio")
+@rate_limit("audio", max_requests=10, window_seconds=60, json_response=False)
 def api_audio():
     """
     Extract audio track from video stream on-the-fly using ffmpeg as an MP3.
@@ -314,7 +414,41 @@ def service_worker():
 @app.route("/api/health")
 def health():
     """Health check endpoint."""
-    return jsonify({"status": "ok", "app": "Pinterest Video Downloader", "version": "1.0.0"})
+    return jsonify({"status": "ok", "app": "PinFetch", "version": "2.0.0"})
+
+
+@app.route("/privacy")
+def privacy():
+    """Privacy Policy page."""
+    return render_template("privacy.html")
+
+
+@app.route("/terms")
+def terms():
+    """Terms of Use page."""
+    return render_template("terms.html")
+
+
+@app.route("/takedown", methods=["GET", "POST"])
+def takedown():
+    """Takedown request page."""
+    if request.method == "POST":
+        form = request.form
+        entry = {
+            "id": str(uuid.uuid4()),
+            "submitted_at": datetime.now(timezone.utc).isoformat(),
+            "name": form.get("name", "").strip()[:100],
+            "email": form.get("email", "").strip()[:200],
+            "pin_url": form.get("pin_url", "").strip()[:500],
+            "reason": form.get("reason", "").strip()[:2000],
+            "ip": get_client_ip(),
+        }
+        with _takedown_lock:
+            with open(TAKEDOWN_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+        logger.info(f"Takedown request submitted: id={entry['id']} pin_url={entry['pin_url']}")
+        return render_template("takedown.html", submitted=True)
+    return render_template("takedown.html", submitted=False)
 
 
 if __name__ == "__main__":

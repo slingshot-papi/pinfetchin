@@ -9,3 +9,6 @@ env/
 .env
 .DS_Store
 Thumbs.db
+
+# Sensitive user data — never commit takedown logs
+takedown_requests.jsonl

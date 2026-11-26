@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy – PinFetch</title>
+    <meta name="description" content="PinFetch Privacy Policy — how we handle your data, cookies, and third-party services.">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="logo-name">Pin<span class="logo-accent">Fetch</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/terms">Terms</a>
+                <a href="/takedown">Takedown</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="legal-page">
+        <h1>Privacy Policy</h1>
+        <p class="legal-updated">Last updated: November 2024</p>
+
+        <div class="notice-box">
+            ⚠️ PinFetch is <strong>not affiliated with Pinterest, Inc.</strong> This tool helps you download content from publicly accessible Pinterest URLs. Download only content you own or have permission to use.
+        </div>
+
+        <h2>1. Information We Collect</h2>
+        <p>PinFetch is designed to be privacy-first. We do <strong>not</strong> store, log, or share any of the following:</p>
+        <ul>
+            <li>Pinterest URLs you enter into the downloader</li>
+            <li>Files you download via PinFetch</li>
+            <li>Your name, email address, or account information (unless you submit a takedown request)</li>
+            <li>Browsing history or usage patterns beyond anonymous server logs</li>
+        </ul>
+        <p>Your download preferences (e.g. preferred quality) may be stored locally in your browser's <code>localStorage</code> — this data never leaves your device.</p>
+
+        <h2>2. Server Logs</h2>
+        <p>Like all web servers, PinFetch records standard HTTP request logs (IP address, request path, timestamp, response status). These logs are used solely for debugging, security monitoring, and abuse prevention. They are not sold or shared with third parties and are retained for a maximum of 30 days.</p>
+
+        <h2>3. Cookies</h2>
+        <p>PinFetch does <strong>not</strong> use tracking cookies or session cookies. If Google AdSense is displayed on this site, Google may set cookies to serve relevant advertisements (see Section 5 below).</p>
+
+        <h2>4. Takedown Requests</h2>
+        <p>If you submit a takedown request via our <a href="/takedown">Takedown Request</a> page, we collect:</p>
+        <ul>
+            <li>Your name and email address (to respond to your request)</li>
+            <li>The Pinterest URL you believe infringes your rights</li>
+            <li>A description of the alleged infringement</li>
+        </ul>
+        <p>This information is stored securely and used only to process your request. Takedown log entries are retained for a maximum of <strong>90 days</strong>, after which they are deleted.</p>
+
+        <h2>5. Google AdSense</h2>
+        <p>This site may display advertisements served by <strong>Google AdSense</strong>. Google may use cookies and similar technologies to serve ads based on your prior visits to this and other websites. You can opt out of personalised advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener">Google's Ads Settings</a> or <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener">aboutads.info</a>.</p>
+        <p>Google AdSense is governed by Google's own <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy Policy</a> and <a href="https://support.google.com/adsense/answer/48182" target="_blank" rel="noopener">AdSense programme policies</a>.</p>
+
+        <h2>6. Third-Party Services</h2>
+        <p>PinFetch uses the following third-party services:</p>
+        <ul>
+            <li><strong>Google Fonts</strong> — to load the Inter typeface. Font requests are sent to Google's servers; see <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google's Privacy Policy</a>.</li>
+            <li><strong>Pinterest CDN (pinimg.com)</strong> — media files are streamed directly from Pinterest's content delivery network. Pinterest's <a href="https://policy.pinterest.com/en/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a> applies to that traffic.</li>
+        </ul>
+
+        <h2>7. Pinterest API Usage</h2>
+        <p>PinFetch fetches publicly available Pinterest content in accordance with Pinterest's <a href="https://policy.pinterest.com/en/developer-guidelines" target="_blank" rel="noopener">Developer Guidelines</a> and <a href="https://policy.pinterest.com/en/terms-of-service" target="_blank" rel="noopener">Terms of Service</a>. We do not circumvent any authentication or access control mechanism.</p>
+
+        <h2>8. Children's Privacy</h2>
+        <p>PinFetch is not directed at children under 13. We do not knowingly collect personal information from children.</p>
+
+        <h2>9. Changes to This Policy</h2>
+        <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated date. Continued use of PinFetch after changes constitutes acceptance of the revised policy.</p>
+
+        <h2>10. Contact</h2>
+        <p>For privacy-related questions, data deletion requests, or concerns, please contact us at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+        <p>To report infringing content, please use our <a href="/takedown">Takedown Request</a> page.</p>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span class="logo-name">Pin<span class="logo-accent">Fetch</span></span>
+                <p>Fast and free Pinterest video &amp; image downloader for all devices.</p>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Use</a>
+                <a href="/takedown">Takedown Request</a>
+                <a href="mailto:{{ contact_email }}">Contact</a>
+            </div>
+            <div class="footer-disclaimer">
+                <p>⚠️ Not affiliated with or endorsed by Pinterest, Inc. Download only content you have the right to use. Respect creators' intellectual property.</p>
+            </div>
+            <div class="footer-note">
+                <p>&copy; {{ current_year }} PinFetch. This site may display Google AdSense ads. <a href="/privacy">Privacy Policy</a>.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Takedown Request – PinFetch</title>
+    <meta name="description" content="Submit a DMCA takedown or content removal request for PinFetch.">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="logo-name">Pin<span class="logo-accent">Fetch</span></span>
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/privacy">Privacy</a>
+                <a href="/terms">Terms</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="legal-page">
+        <h1>Takedown Request</h1>
+        <p class="legal-updated">DMCA &amp; Content Removal</p>
+
+        <p>PinFetch respects the intellectual property rights of content creators. If you believe that content accessible through PinFetch infringes your copyright or other rights, please complete the form below.</p>
+
+        <div class="notice-box">
+            <strong>Important:</strong> PinFetch does not host any Pinterest content on its own servers. It provides a proxy tool to download publicly accessible content from Pinterest's CDN. To have content removed from Pinterest itself, please use <a href="https://help.pinterest.com/en/contact/copyright" target="_blank" rel="noopener">Pinterest's own copyright reporting tool</a>.
+        </div>
+
+        {% if submitted %}
+        <div class="success-box">
+            <p style="font-size:2rem; margin-bottom:0.5rem;">✅</p>
+            <h2 style="margin:0 0 0.5rem;">Request Received</h2>
+            <p>Thank you. We have received your takedown request and will review it within <strong>5 business days</strong>. If we need additional information, we will contact you at the email address you provided.</p>
+            <p style="margin-top:1rem;"><a href="/">← Back to PinFetch</a></p>
+        </div>
+        {% else %}
+
+        <h2>DMCA Takedown Process</h2>
+        <p>To submit a valid DMCA notice, please provide the following information as required by 17 U.S.C. § 512(c)(3):</p>
+        <ol>
+            <li>Your name and contact information (email required for us to respond).</li>
+            <li>Identification of the copyrighted work you claim has been infringed.</li>
+            <li>The Pinterest URL of the infringing content.</li>
+            <li>A statement that you have a good-faith belief the use is not authorised by the copyright owner, its agent, or the law.</li>
+            <li>A statement that the information in the notice is accurate and that you are the copyright owner or authorised to act on their behalf.</li>
+        </ol>
+        <p>By submitting this form, you confirm the above statements are true and accurate. Submitting a false DMCA notice may result in legal liability under 17 U.S.C. § 512(f).</p>
+
+        <form class="takedown-form" method="POST" action="/takedown">
+            <div>
+                <label for="name">Full Name *</label>
+                <input type="text" id="name" name="name" required maxlength="100" placeholder="Your legal name or company name">
+            </div>
+            <div>
+                <label for="email">Email Address *</label>
+                <input type="email" id="email" name="email" required maxlength="200" placeholder="we'll use this to respond to your request">
+            </div>
+            <div>
+                <label for="pin_url">Pinterest URL of Infringing Content *</label>
+                <input type="url" id="pin_url" name="pin_url" required maxlength="500" placeholder="https://www.pinterest.com/pin/...">
+            </div>
+            <div>
+                <label for="reason">Description of Infringement *</label>
+                <textarea id="reason" name="reason" required maxlength="2000" rows="6" placeholder="Please describe the content you own and how it is being infringed. Include links to the original work if possible."></textarea>
+            </div>
+            <div>
+                <p style="font-size:0.82rem; color: var(--text-muted); line-height:1.5;">
+                    By submitting this form, you confirm under penalty of perjury that the information is accurate and that you are the copyright owner or authorised to act on behalf of the copyright owner.
+                </p>
+            </div>
+            <button type="submit" class="btn-submit">Submit Takedown Request</button>
+        </form>
+
+        <p style="margin-top:1.5rem; font-size:0.9rem;">You may also email your request directly to <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.</p>
+
+        {% endif %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <span class="logo-name">Pin<span class="logo-accent">Fetch</span></span>
+                <p>Fast and free Pinterest video &amp; image downloader for all devices.</p>
+            </div>
+            <div class="footer-links">
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Use</a>
+                <a href="/takedown">Takedown Request</a>
+                <a href="mailto:{{ contact_email }}">Contact</a>
+            </div>
+            <div class="footer-disclaimer">
+                <p>⚠️ Not affiliated with or endorsed by Pinterest, Inc. Download only content you have the right to use. Respect creators' intellectual property.</p>
+            </div>
+            <div class="footer-note">
+                <p>&copy; {{ current_year }} PinFetch. This site may display Google AdSense ads. <a href="/privacy">Privacy Policy</a>.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
