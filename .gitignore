@@ -6,9 +6,19 @@ __pycache__/
 venv/
 env/
 .venv/
-.env
 .DS_Store
 Thumbs.db
+
+# Environment variables and secrets — never commit to GitHub
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.secret
+secrets.*
+credentials*.json
+service-account*.json
 
 # Sensitive user data — never commit takedown logs
 takedown_requests.jsonl
