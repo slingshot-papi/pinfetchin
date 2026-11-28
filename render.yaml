@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: pinfetch
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: CONTACT_EMAIL
+        value: contact@pinfetch.app
+      - key: YTDLP_AUTO_UPDATE
+        value: "true"
+      - key: YTDLP_UPDATE_INTERVAL_HOURS
+        value: "12"
