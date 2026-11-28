@@ -277,7 +277,7 @@ def extract_with_pinterest_api(url: str, pin_id: str) -> dict | None:
         return None
 
 
-def _classify_video_url(v_url: str, format_id: str = "", width: int = 0, height: int = 0) -> dict:
+def _classify_video_url(v_url: str, format_id: str = "", width: int = 0, height: int = 0, audio_url: str | None = None) -> dict:
     """Build a normalized format entry for a Pinterest video URL."""
     is_hls = '.m3u8' in v_url or 'hls' in format_id.lower()
     dim = min(width, height) if (width and height) else (height or width)
@@ -308,6 +308,7 @@ def _classify_video_url(v_url: str, format_id: str = "", width: int = 0, height:
         'resolution': f"{width}x{height}" if width and height else quality,
         'ext': 'mp4',
         'url': v_url,
+        'audio_url': audio_url,
         'filesize': None,
         'is_hls': is_hls,
         'is_direct_mp4': not is_hls and ('.mp4' in v_url),
@@ -315,7 +316,7 @@ def _classify_video_url(v_url: str, format_id: str = "", width: int = 0, height:
 
 
 def _parse_m3u8_variants(master_url: str) -> list[dict]:
-    """Fetch a master .m3u8 playlist and extract individual resolution variants."""
+    """Fetch a master .m3u8 playlist and extract individual resolution variants + separate audio tracks."""
     variants = []
     try:
         resp = _SESSION.get(master_url, timeout=4)
@@ -323,6 +324,21 @@ def _parse_m3u8_variants(master_url: str) -> list[dict]:
             return variants
 
         lines = [line.strip() for line in resp.text.splitlines() if line.strip()]
+
+        # Parse separate audio track declarations (#EXT-X-MEDIA:TYPE=AUDIO,...)
+        audio_groups: dict[str, str] = {}
+        default_audio_url: str | None = None
+        for line in lines:
+            if line.startswith("#EXT-X-MEDIA:") and "TYPE=AUDIO" in line:
+                uri_m = re.search(r'URI="([^"]+)"', line)
+                grp_m = re.search(r'GROUP-ID="([^"]+)"', line)
+                if uri_m:
+                    a_url = urljoin(master_url, uri_m.group(1))
+                    if grp_m:
+                        audio_groups[grp_m.group(1)] = a_url
+                    if "DEFAULT=YES" in line or default_audio_url is None:
+                        default_audio_url = a_url
+
         for i, line in enumerate(lines):
             if line.startswith("#EXT-X-STREAM-INF:") and i + 1 < len(lines):
                 next_line = lines[i + 1]
@@ -331,8 +347,20 @@ def _parse_m3u8_variants(master_url: str) -> list[dict]:
                 res_match = re.search(r'RESOLUTION=(\d+)x(\d+)', line)
                 width = int(res_match.group(1)) if res_match else 0
                 height = int(res_match.group(2)) if res_match else 0
+                audio_grp_m = re.search(r'AUDIO="([^"]+)"', line)
+                audio_url = (
+                    audio_groups.get(audio_grp_m.group(1)) if audio_grp_m else None
+                ) or default_audio_url
                 variant_url = urljoin(master_url, next_line)
-                variants.append(_classify_video_url(variant_url, format_id=f"hls_{width}x{height}", width=width, height=height))
+                variants.append(
+                    _classify_video_url(
+                        variant_url,
+                        format_id=f"hls_{width}x{height}",
+                        width=width,
+                        height=height,
+                        audio_url=audio_url,
+                    )
+                )
     except Exception as e:
         logger.debug(f"Failed to parse m3u8 variants from {master_url}: {e}")
     return variants

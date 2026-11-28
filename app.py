@@ -225,6 +225,7 @@ def api_download():
     Supports HTTP Range requests and on-the-fly HLS remuxing.
     """
     target_url = request.args.get("url", "").strip()
+    audio_url = request.args.get("audio_url", "").strip()
     custom_title = request.args.get("title", "pinterest_video").strip()
     media_type = request.args.get("type", "video").strip()
     is_inline = request.args.get("inline") == "1"
@@ -233,10 +234,14 @@ def api_download():
     if not target_url:
         return "Missing url parameter", 400
 
-    # Ensure target is from trusted pinterest CDN
+    # Ensure target (and optional separate audio stream) are from trusted pinterest CDN
     parsed = re.match(r'^https?://([^/]+)', target_url)
     if not parsed or not re.search(r'(pinimg\.com|pinterest\.com)', parsed.group(1)):
         return "Invalid download URL origin", 403
+    if audio_url:
+        parsed_audio = re.match(r'^https?://([^/]+)', audio_url)
+        if not parsed_audio or not re.search(r'(pinimg\.com|pinterest\.com)', parsed_audio.group(1)):
+            audio_url = ""
 
     safe_title = sanitize_filename(custom_title)
     is_image = (media_type == "image") or any(target_url.lower().endswith(x) for x in ['.jpg', '.jpeg', '.png', '.webp', '.gif'])
@@ -258,17 +263,40 @@ def api_download():
     # Case 1: Video stream is an HLS .m3u8 playlist -> remux to MP4 on-the-fly using ffmpeg
     if not is_image and ".m3u8" in target_url:
         try:
-            cmd = [
-                "ffmpeg", "-y",
-                "-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                "-headers", "Referer: https://www.pinterest.com/\r\n",
-                "-i", target_url,
-                "-c", "copy",
-                "-bsf:a", "aac_adtstoasc",
-                "-movflags", "frag_keyframe+empty_moov+default_base_moof",
-                "-f", "mp4",
-                "pipe:1"
-            ]
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            if audio_url:
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-user_agent", ua,
+                    "-headers", "Referer: https://www.pinterest.com/\r\n",
+                    "-i", target_url,
+                    "-user_agent", ua,
+                    "-headers", "Referer: https://www.pinterest.com/\r\n",
+                    "-i", audio_url,
+                    "-map", "0:v:0",
+                    "-map", "1:a:0?",
+                    "-c:v", "copy",
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+                    "-f", "mp4",
+                    "pipe:1"
+                ]
+            else:
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-user_agent", ua,
+                    "-headers", "Referer: https://www.pinterest.com/\r\n",
+                    "-i", target_url,
+                    "-map", "0:v:0",
+                    "-map", "0:a:0?",
+                    "-c:v", "copy",
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+                    "-f", "mp4",
+                    "pipe:1"
+                ]
             proc = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,

@@ -254,13 +254,24 @@ document.addEventListener('DOMContentLoaded', () => {
             badgeType.style.borderColor = 'var(--border-subtle)';
         }
 
+        // Helper to build /api/download URL including separate HLS audio_url when present
+        const buildDownloadUrl = (fmtOrUrl, title, type, inline = false) => {
+            const targetUrl = typeof fmtOrUrl === 'string' ? fmtOrUrl : fmtOrUrl.url;
+            const audioUrl = typeof fmtOrUrl === 'object' && fmtOrUrl.audio_url ? fmtOrUrl.audio_url : '';
+            let qs = `/api/download?url=${encodeURIComponent(targetUrl)}&title=${encodeURIComponent(title)}&type=${type}`;
+            if (audioUrl) qs += `&audio_url=${encodeURIComponent(audioUrl)}`;
+            if (inline) qs += '&inline=1';
+            return qs;
+        };
+
         // Best format for primary download (declared before videoPreview.onerror)
         const bestFormat = (data.formats && data.formats.length > 0) ? data.formats[0] : null;
 
         // Media Player vs Image
         if (data.type === 'video' && (data.preview_url || (bestFormat && bestFormat.url))) {
             const rawPreviewUrl = data.preview_url || bestFormat.url;
-            const proxyPreviewUrl = `/api/download?url=${encodeURIComponent(rawPreviewUrl)}&title=${encodeURIComponent(data.title)}&type=video&inline=1`;
+            const previewTarget = bestFormat && bestFormat.url === rawPreviewUrl ? bestFormat : rawPreviewUrl;
+            const proxyPreviewUrl = buildDownloadUrl(previewTarget, data.title, 'video', true);
             imagePreviewContainer.style.display = 'none';
             videoPreview.style.display = 'block';
             if (data.thumbnail) {
@@ -290,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Configure Primary Download Button
             const isImage = (data.type === 'image' || bestFormat.is_image);
             const primaryExt = isImage ? (bestFormat.ext || 'jpg') : 'mp4';
-            const downloadProxyUrl = `/api/download?url=${encodeURIComponent(bestFormat.url)}&title=${encodeURIComponent(data.title)}&type=${data.type}`;
+            const downloadProxyUrl = buildDownloadUrl(bestFormat, data.title, data.type);
             
             btnPrimaryDownload.href = downloadProxyUrl;
             btnPrimaryDownload.setAttribute('download', `${sanitizeTitle(data.title)}.${primaryExt}`);
@@ -314,7 +325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const isHD = fmt.height >= 720 || (fmt.quality && fmt.quality.includes('HD')) || (fmt.quality && fmt.quality.includes('Original'));
                 const fileExt = (data.type === 'image' || fmt.is_image) ? (fmt.ext || 'jpg') : 'mp4';
-                const dlUrl = `/api/download?url=${encodeURIComponent(fmt.url)}&title=${encodeURIComponent(data.title)}&type=${data.type}`;
+                const dlUrl = buildDownloadUrl(fmt, data.title, data.type);
 
                 row.innerHTML = `
                     <div class="format-title-wrap">
