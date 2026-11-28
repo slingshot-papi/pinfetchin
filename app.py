@@ -27,11 +27,18 @@ from flask import (
     stream_with_context,
 )
 
-from extractor import extract_pinterest_media, clean_pinterest_url
-
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+from updater import get_installed_version, start_background_updater, update_ytdlp_if_needed
+
+# Check for yt-dlp updates before importing extractor so new releases take effect immediately
+update_ytdlp_if_needed()
+
+from extractor import extract_pinterest_media, clean_pinterest_url
+
+start_background_updater()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -414,7 +421,12 @@ def service_worker():
 @app.route("/api/health")
 def health():
     """Health check endpoint."""
-    return jsonify({"status": "ok", "app": "PinFetch", "version": "2.0.0"})
+    return jsonify({
+        "status": "ok",
+        "app": "PinFetch",
+        "version": "2.0.0",
+        "yt_dlp_version": get_installed_version(),
+    })
 
 
 @app.route("/privacy")
