@@ -17,6 +17,12 @@ from datetime import datetime, timezone
 from functools import wraps
 from urllib.parse import unquote
 import requests
+from requests.adapters import HTTPAdapter
+
+_download_session = requests.Session()
+_download_adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+_download_session.mount("https://", _download_adapter)
+_download_session.mount("http://", _download_adapter)
 from flask import (
     Flask,
     render_template,
@@ -308,7 +314,7 @@ def api_download():
         req_headers["Range"] = client_range
 
     try:
-        remote_resp = requests.get(target_url, headers=req_headers, stream=True, timeout=20)
+        remote_resp = _download_session.get(target_url, headers=req_headers, stream=True, timeout=20)
 
         # Build response headers
         resp_headers = {

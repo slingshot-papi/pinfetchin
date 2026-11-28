@@ -6,16 +6,21 @@ Supports video pins, standard image pins, and multi-image carousel pins.
 
 import re
 import json
+import time
 import logging
+import threading
 from collections import Counter
 from urllib.parse import urlparse
 import requests
+from requests.adapters import HTTPAdapter
 import yt_dlp
 
 logger = logging.getLogger(__name__)
 
-# Cache for extracted pin metadata (pin_id/url -> data, ttl)
-_CACHE = {}
+# Cache for extracted pin metadata (clean_url -> (expires_at, data))
+_CACHE: dict[str, tuple[float, dict]] = {}
+_CACHE_LOCK = threading.Lock()
+_CACHE_TTL_SECONDS = 900  # 15 minutes
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -29,6 +34,13 @@ HEADERS = {
     "Referer": "https://www.pinterest.com/",
 }
 
+# Persistent HTTP session with connection pooling for fast repeated requests
+_SESSION = requests.Session()
+_SESSION.headers.update(HEADERS)
+_adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+_SESSION.mount("https://", _adapter)
+_SESSION.mount("http://", _adapter)
+
 
 def clean_pinterest_url(url: str) -> str:
     """Clean and resolve any short URLs (pin.it) to canonical Pinterest URL."""
@@ -40,13 +52,13 @@ def clean_pinterest_url(url: str) -> str:
     parsed = urlparse(url)
     if "pin.it" in parsed.netloc:
         try:
-            resp = requests.head(url, headers=HEADERS, allow_redirects=True, timeout=8)
+            resp = _SESSION.head(url, allow_redirects=True, timeout=5)
             url = resp.url
         except Exception as e:
             logger.warning(f"Failed to resolve pin.it redirect: {e}")
             try:
-                resp = requests.get(url, headers=HEADERS, allow_redirects=True, timeout=8)
-                url = resp.url
+                with _SESSION.get(url, allow_redirects=True, timeout=5, stream=True) as resp:
+                    url = resp.url
             except Exception:
                 pass
     return url
@@ -70,8 +82,10 @@ def extract_with_ytdlp(url: str) -> dict | None:
         'no_warnings': True,
         'skip_download': True,
         'nocheckcertificate': True,
+        'noplaylist': True,
+        'hls_prefer_native': True,
         'user_agent': USER_AGENT,
-        'socket_timeout': 12,
+        'socket_timeout': 8,
     }
 
     try:
@@ -263,13 +277,95 @@ def extract_with_pinterest_api(url: str, pin_id: str) -> dict | None:
         return None
 
 
+def _classify_video_url(v_url: str, format_id: str = "", width: int = 0, height: int = 0) -> dict:
+    """Build a normalized format entry for a Pinterest video URL."""
+    is_hls = '.m3u8' in v_url or 'hls' in format_id.lower()
+    dim = min(width, height) if (width and height) else (height or width)
+    if dim >= 1080 or '/1080p/' in v_url:
+        quality = "1080p Full HD"
+    elif dim >= 720 or '/720p/' in v_url or '720p' in v_url:
+        quality = "720p HD"
+    elif dim >= 480 or '/480p/' in v_url:
+        quality = "480p SD"
+    elif dim >= 360 or '/360p/' in v_url:
+        quality = "360p Medium"
+    elif dim >= 240 or '/240p/' in v_url:
+        quality = "240p Mobile"
+    elif dim > 0:
+        quality = f"{dim}p"
+    elif 'expMp4' in v_url or 'exp' in v_url.lower():
+        quality = "Standard HD"
+    elif is_hls:
+        quality = "HD Stream (HLS)"
+    else:
+        quality = "Default Video"
+
+    return {
+        'format_id': format_id or ('hls' if is_hls else 'mp4'),
+        'quality': quality,
+        'height': height or (720 if '720p' in v_url else 0),
+        'width': width,
+        'resolution': f"{width}x{height}" if width and height else quality,
+        'ext': 'mp4',
+        'url': v_url,
+        'filesize': None,
+        'is_hls': is_hls,
+        'is_direct_mp4': not is_hls and ('.mp4' in v_url),
+    }
+
+
+def _extract_videos_from_html(html: str) -> list[dict]:
+    """Extract video URLs embedded in Pinterest's pin HTML JSON."""
+    raw_urls: list[str] = []
+
+    # Primary: "videos":{"videoUrls":[...]} in Relay / PWS JSON
+    vid_block = re.search(r'"videos"\s*:\s*\{\s*"videoUrls"\s*:\s*\[([^\]]+)\]', html)
+    if vid_block:
+        raw_urls.extend(re.findall(r'https://v\d*\.pinimg\.com/videos/[^"\'\s<>]+', vid_block.group(1)))
+
+    # Secondary: "video_list":{...}
+    if not raw_urls:
+        vlist_block = re.search(r'"video_list"\s*:\s*\{(.*?)\}\s*\}', html)
+        if vlist_block:
+            raw_urls.extend(re.findall(r'https://v\d*\.pinimg\.com/videos/[^"\'\s<>]+', vlist_block.group(1)))
+
+    # Fallback: direct video URLs for the main pin (only if a video hash appears)
+    if not raw_urls:
+        all_v = re.findall(r'https://v\d*\.pinimg\.com/videos/[^"\'\s<>]+\.(?:mp4|m3u8)', html)
+        if all_v:
+            # Group by video hash and pick the first (main pin) hash
+            hash_match = re.search(r'/([a-f0-9]{32})\.(?:mp4|m3u8)', all_v[0])
+            if hash_match:
+                h = hash_match.group(1)
+                raw_urls = [u for u in all_v if h in u]
+            else:
+                raw_urls = all_v[:6]
+
+    video_formats = []
+    seen = set()
+    for u in raw_urls:
+        u = u.replace('\\u002F', '/').replace('\\/', '/')
+        if u in seen or u.endswith('.mpd'):
+            continue
+        if not ('.mp4' in u or '.m3u8' in u):
+            continue
+        seen.add(u)
+        video_formats.append(_classify_video_url(u))
+
+    video_formats.sort(
+        key=lambda x: (1 if x['is_direct_mp4'] else 0, x['height'] or 0),
+        reverse=True
+    )
+    return video_formats
+
+
 def extract_from_html(url: str, pin_id: str | None = None) -> dict | None:
     """
-    Direct HTML parser for Pinterest Image Pins and Carousels.
-    Extracts high-resolution images (Originals, 1200px, 736px, 474px).
+    Fast single-request HTML parser for Pinterest Videos, Image Pins, and Carousels.
+    Extracts video streams (MP4/HLS) first if present, otherwise extracts high-res images.
     """
     try:
-        resp = requests.get(url, headers=HEADERS, timeout=12)
+        resp = _SESSION.get(url, timeout=8)
         if resp.status_code != 200:
             return None
 
@@ -277,11 +373,14 @@ def extract_from_html(url: str, pin_id: str | None = None) -> dict | None:
 
         # 1. Parse Title & Description
         title_match = re.search(r'<title>([^<]+)</title>', html)
-        raw_title = title_match.group(1).strip() if title_match else "Pinterest Image"
+        raw_title = title_match.group(1).strip() if title_match else "Pinterest Media"
         title = re.sub(r'\s*\|\s*Pinterest$', '', raw_title, flags=re.IGNORECASE).strip()
 
         desc_match = re.search(r'<meta\s+(?:name|property)="description"\s+content="([^"]*)"', html, re.IGNORECASE)
         description = desc_match.group(1).strip() if desc_match else ""
+
+        og_image_match = re.search(r'<meta\s+(?:name|property)="og:image"\s+content="([^"]+)"', html, re.IGNORECASE)
+        og_image = og_image_match.group(1).strip() if og_image_match else ""
 
         # Check for creator
         creator_match = re.search(r'"pinner":\{"username":"([^"]+)","full_name":"([^"]+)"', html)
@@ -291,7 +390,30 @@ def extract_from_html(url: str, pin_id: str | None = None) -> dict | None:
             uploader = creator_match.group(2) or creator_match.group(1)
             uploader_url = f"https://www.pinterest.com/{creator_match.group(1)}/"
 
-        # 2. Extract image hashes
+        resolved_id = pin_id or extract_pin_id(url) or "pin"
+
+        # 2. Check for Video Pin in the already-fetched HTML
+        video_formats = _extract_videos_from_html(html)
+        if video_formats:
+            best_direct = next((f for f in video_formats if f['is_direct_mp4']), None)
+            best_stream_url = best_direct['url'] if best_direct else video_formats[0]['url']
+            return {
+                'success': True,
+                'id': resolved_id,
+                'title': title,
+                'description': description,
+                'thumbnail': og_image,
+                'duration': None,
+                'duration_str': None,
+                'uploader': uploader,
+                'uploader_url': uploader_url,
+                'webpage_url': url,
+                'preview_url': best_stream_url,
+                'formats': video_formats,
+                'type': 'video',
+            }
+
+        # 3. Otherwise extract image hashes (Image Pins & Carousels)
         pattern = r'i\.pinimg\.com/(?:originals|\d+x|\d+x\d+)/([a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]{2}/[a-f0-9]+\.(?:jpg|png|webp|gif))'
         matches = re.findall(pattern, html, re.IGNORECASE)
         if not matches:
@@ -349,7 +471,7 @@ def extract_from_html(url: str, pin_id: str | None = None) -> dict | None:
 
         return {
             'success': True,
-            'id': pin_id or extract_pin_id(url) or "pin",
+            'id': resolved_id,
             'title': title,
             'description': description,
             'thumbnail': best_image,
@@ -365,7 +487,7 @@ def extract_from_html(url: str, pin_id: str | None = None) -> dict | None:
             'formats': formats
         }
     except Exception as e:
-        logger.warning(f"HTML image extraction error: {e}")
+        logger.warning(f"HTML extraction error: {e}")
         return None
 
 
@@ -376,27 +498,27 @@ def extract_pinterest_media(url: str) -> dict:
     """
     clean_url = clean_pinterest_url(url)
 
-    # Check cache
-    if clean_url in _CACHE:
-        return _CACHE[clean_url]
+    # Check TTL cache
+    now = time.monotonic()
+    with _CACHE_LOCK:
+        cached = _CACHE.get(clean_url)
+        if cached and cached[0] > now:
+            return cached[1]
 
-    # Strategy 1: yt-dlp (Primary for Video Pins)
-    data = extract_with_ytdlp(clean_url)
+    pin_id = extract_pin_id(clean_url)
 
-    # Strategy 2: If yt-dlp returned no formats or failed, try Pinterest internal API
+    # Strategy 1: Fast single-request HTML parser (handles both Video Pins & Image/Carousel Pins)
+    data = extract_from_html(clean_url, pin_id)
+
+    # Strategy 2: yt-dlp fallback for edge-case video pins
     if not data or not data.get('formats'):
-        pin_id = extract_pin_id(clean_url)
-        if pin_id:
-            api_data = extract_with_pinterest_api(clean_url, pin_id)
-            if api_data:
-                data = api_data
+        data = extract_with_ytdlp(clean_url)
 
-    # Strategy 3: Try HTML scraping (Primary for Image Pins, Photos & Carousels)
-    if not data or not data.get('formats'):
-        pin_id = extract_pin_id(clean_url)
-        html_data = extract_from_html(clean_url, pin_id)
-        if html_data:
-            data = html_data
+    # Strategy 3: Pinterest internal API fallback
+    if (not data or not data.get('formats')) and pin_id:
+        api_data = extract_with_pinterest_api(clean_url, pin_id)
+        if api_data:
+            data = api_data
 
     if not data or not data.get('formats'):
         return {
@@ -419,9 +541,10 @@ def extract_pinterest_media(url: str) -> dict:
     data['formats'] = unique_formats
 
     # Cache result for 15 minutes
-    _CACHE[clean_url] = data
-    if len(_CACHE) > 500:
-        _CACHE.pop(next(iter(_CACHE)))
+    with _CACHE_LOCK:
+        _CACHE[clean_url] = (time.monotonic() + _CACHE_TTL_SECONDS, data)
+        if len(_CACHE) > 500:
+            _CACHE.pop(next(iter(_CACHE)))
 
     return data
 
