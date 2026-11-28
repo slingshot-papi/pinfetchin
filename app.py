@@ -163,11 +163,11 @@ SAMPLE_PINS = [
 
 
 def sanitize_filename(filename: str) -> str:
-    """Make filename safe for Content-Disposition."""
-    # Remove invalid characters
-    cleaned = re.sub(r'[\\/*?:"<>|]', "", filename)
-    cleaned = cleaned.replace(" ", "_")
-    cleaned = cleaned.strip("._")
+    """Make filename ASCII-safe for HTTP Content-Disposition headers."""
+    import unicodedata
+    ascii_name = unicodedata.normalize("NFKD", filename or "").encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r'[\\/*?:"<>|]', "", ascii_name)
+    cleaned = re.sub(r'\s+', "_", cleaned).strip("._")
     if not cleaned:
         cleaned = "pinterest_video"
     return cleaned[:80]
@@ -227,6 +227,8 @@ def api_download():
     target_url = request.args.get("url", "").strip()
     custom_title = request.args.get("title", "pinterest_video").strip()
     media_type = request.args.get("type", "video").strip()
+    is_inline = request.args.get("inline") == "1"
+    disposition_type = "inline" if is_inline else "attachment"
 
     if not target_url:
         return "Missing url parameter", 400
@@ -258,6 +260,8 @@ def api_download():
         try:
             cmd = [
                 "ffmpeg", "-y",
+                "-user_agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "-headers", "Referer: https://www.pinterest.com/\r\n",
                 "-i", target_url,
                 "-c", "copy",
                 "-bsf:a", "aac_adtstoasc",
@@ -290,7 +294,7 @@ def api_download():
                 stream_with_context(generate_hls_mp4()),
                 mimetype="video/mp4",
                 headers={
-                    "Content-Disposition": f'attachment; filename="{filename}"',
+                    "Content-Disposition": f'{disposition_type}; filename="{filename}"',
                     "Content-Type": "video/mp4",
                     "Cache-Control": "public, max-age=3600",
                 }
@@ -318,7 +322,7 @@ def api_download():
 
         # Build response headers
         resp_headers = {
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": f'{disposition_type}; filename="{filename}"',
             "Accept-Ranges": "bytes",
             "Cache-Control": "public, max-age=3600",
             "Content-Type": content_type

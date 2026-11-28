@@ -254,27 +254,34 @@ document.addEventListener('DOMContentLoaded', () => {
             badgeType.style.borderColor = 'var(--border-subtle)';
         }
 
+        // Best format for primary download (declared before videoPreview.onerror)
+        const bestFormat = (data.formats && data.formats.length > 0) ? data.formats[0] : null;
+
         // Media Player vs Image
-        if (data.type === 'video' && data.preview_url) {
+        if (data.type === 'video' && (data.preview_url || (bestFormat && bestFormat.url))) {
+            const rawPreviewUrl = data.preview_url || bestFormat.url;
+            const proxyPreviewUrl = `/api/download?url=${encodeURIComponent(rawPreviewUrl)}&title=${encodeURIComponent(data.title)}&type=video&inline=1`;
             imagePreviewContainer.style.display = 'none';
             videoPreview.style.display = 'block';
-            videoPreview.src = data.preview_url;
             if (data.thumbnail) {
                 videoPreview.poster = data.thumbnail;
+            } else {
+                videoPreview.removeAttribute('poster');
             }
+            // Browsers (Chrome/Edge/Firefox) cannot play .m3u8 natively in <video>; proxy through ffmpeg MP4 remuxer
+            videoPreview.src = rawPreviewUrl.includes('.m3u8') ? proxyPreviewUrl : rawPreviewUrl;
             videoPreview.onerror = () => {
-                if (bestFormat && bestFormat.url && !videoPreview.src.includes('/api/download')) {
-                    videoPreview.src = `/api/download?url=${encodeURIComponent(bestFormat.url)}&title=${encodeURIComponent(data.title)}&type=video`;
+                if (!videoPreview.src.includes('/api/download')) {
+                    videoPreview.src = proxyPreviewUrl;
+                    videoPreview.load();
                 }
             };
+            videoPreview.load();
         } else if (data.thumbnail || data.preview_url) {
             videoPreview.style.display = 'none';
             imagePreviewContainer.style.display = 'flex';
             imagePreview.src = data.preview_url || data.thumbnail;
         }
-
-        // Best format for primary download
-        const bestFormat = (data.formats && data.formats.length > 0) ? data.formats[0] : null;
 
         if (bestFormat) {
             badgeQuality.textContent = bestFormat.quality || (data.type === 'image' ? 'Original Max-Res' : 'HD');

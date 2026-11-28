@@ -10,7 +10,7 @@ import time
 import logging
 import threading
 from collections import Counter
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import requests
 from requests.adapters import HTTPAdapter
 import yt_dlp
@@ -314,8 +314,32 @@ def _classify_video_url(v_url: str, format_id: str = "", width: int = 0, height:
     }
 
 
+def _parse_m3u8_variants(master_url: str) -> list[dict]:
+    """Fetch a master .m3u8 playlist and extract individual resolution variants."""
+    variants = []
+    try:
+        resp = _SESSION.get(master_url, timeout=4)
+        if resp.status_code != 200 or "#EXTM3U" not in resp.text:
+            return variants
+
+        lines = [line.strip() for line in resp.text.splitlines() if line.strip()]
+        for i, line in enumerate(lines):
+            if line.startswith("#EXT-X-STREAM-INF:") and i + 1 < len(lines):
+                next_line = lines[i + 1]
+                if next_line.startswith("#"):
+                    continue
+                res_match = re.search(r'RESOLUTION=(\d+)x(\d+)', line)
+                width = int(res_match.group(1)) if res_match else 0
+                height = int(res_match.group(2)) if res_match else 0
+                variant_url = urljoin(master_url, next_line)
+                variants.append(_classify_video_url(variant_url, format_id=f"hls_{width}x{height}", width=width, height=height))
+    except Exception as e:
+        logger.debug(f"Failed to parse m3u8 variants from {master_url}: {e}")
+    return variants
+
+
 def _extract_videos_from_html(html: str) -> list[dict]:
-    """Extract video URLs embedded in Pinterest's pin HTML JSON."""
+    """Extract video URLs embedded in Pinterest's pin HTML JSON, expanding HLS into 3 quality tiers."""
     raw_urls: list[str] = []
 
     # Primary: "videos":{"videoUrls":[...]} in Relay / PWS JSON
@@ -333,7 +357,6 @@ def _extract_videos_from_html(html: str) -> list[dict]:
     if not raw_urls:
         all_v = re.findall(r'https://v\d*\.pinimg\.com/videos/[^"\'\s<>]+\.(?:mp4|m3u8)', html)
         if all_v:
-            # Group by video hash and pick the first (main pin) hash
             hash_match = re.search(r'/([a-f0-9]{32})\.(?:mp4|m3u8)', all_v[0])
             if hash_match:
                 h = hash_match.group(1)
@@ -341,22 +364,50 @@ def _extract_videos_from_html(html: str) -> list[dict]:
             else:
                 raw_urls = all_v[:6]
 
-    video_formats = []
+    direct_mp4s: list[dict] = []
+    hls_masters: list[str] = []
     seen = set()
+
     for u in raw_urls:
         u = u.replace('\\u002F', '/').replace('\\/', '/')
         if u in seen or u.endswith('.mpd'):
             continue
-        if not ('.mp4' in u or '.m3u8' in u):
-            continue
         seen.add(u)
-        video_formats.append(_classify_video_url(u))
+        if '.mp4' in u:
+            direct_mp4s.append(_classify_video_url(u))
+        elif '.m3u8' in u:
+            hls_masters.append(u)
 
-    video_formats.sort(
-        key=lambda x: (1 if x['is_direct_mp4'] else 0, x['height'] or 0),
-        reverse=True
+    # Prefer standard /hls/ master playlist over /h265/ for broad device compatibility
+    hls_masters.sort(key=lambda u: 0 if '/hls/' in u else 1)
+
+    hls_variants: list[dict] = []
+    if hls_masters:
+        hls_variants = _parse_m3u8_variants(hls_masters[0])
+
+    # Combine direct MP4s + HLS variants, highest resolution first, direct MP4s prioritized
+    all_formats = direct_mp4s + hls_variants
+    if not all_formats and hls_masters:
+        all_formats = [_classify_video_url(hls_masters[0])]
+
+    all_formats.sort(
+        key=lambda x: (1 if x['is_direct_mp4'] else 0, min(x['width'] or 0, x['height'] or 0) or (x['height'] or 0)),
+        reverse=True,
     )
-    return video_formats
+
+    # Deduplicate by quality tier so the user gets 3 clean, distinct download qualities
+    selected: list[dict] = []
+    seen_qualities: set[str] = set()
+    for fmt in all_formats:
+        q = fmt['quality']
+        if q in seen_qualities:
+            continue
+        seen_qualities.add(q)
+        selected.append(fmt)
+        if len(selected) >= 3:
+            break
+
+    return selected
 
 
 def extract_from_html(url: str, pin_id: str | None = None) -> dict | None:
