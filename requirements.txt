@@ -22,5 +22,5 @@ rich==15.0.0
 urllib3==2.6.3
 websockets==16.0
 Werkzeug==3.1.9
-yt-dlp>=2026.7.4
+yt-dlp>=2026.11.23
 yt-dlp-ejs>=0.4.0
